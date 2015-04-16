@@ -51,7 +51,6 @@ def iteration(vertices,sides,faces):
     newFaces = []
     
     for face in faces:
-        print "face " + str(face)
         center = centroid(face, vertices, sides)
         centroidIndex = checkAndAdd(center, newVertices)   
         
