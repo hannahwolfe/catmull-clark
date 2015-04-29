@@ -12,8 +12,8 @@ import sys
 vertices = [[0,0,0],[1,0,0],[0,1,0],[0,0,1],[1,1,0],[1,0,1],[0,1,1],[1,1,1]]
 sides = [[0,1],[0,2],[0,3],[1,4],[1,5],[2,4],[2,6],[3,5],[3,6],[4,7],[5,7],[6,7]]#verticesIndex
 faces = [[1,2,6,8],[3,4,9,10],[0,2,4,7],[5,6,9,11],[0,1,3,5],[7,8,10,11]]#sidesIndex
-iterations = 4
-outputFile = "default_output.stl"
+iterations = 5
+outputFile = "default_output4.stl"
 
 def checkAndAdd (item, array):
     try:
@@ -38,7 +38,7 @@ def midPoint (side, newVertices):
     v2= newVertices[side[1]]
     return [(v1[0] + v2[0]) / 2.0, (v1[1] + v2[1]) / 2.0, (v1[2] + v2[2]) / 2.0]
 
-def force (vertex,vertices):
+def average(vertices):
     x = 0
     y = 0
     z = 0
@@ -46,10 +46,39 @@ def force (vertex,vertices):
         x += v[0]
         y += v[1]
         z += v[2]
-    return [vertex[0] + (.2* (vertex[0] - x / (1.0*len(vertices)))),
-            vertex[1] + (.2* (vertex[1] - y / (1.0*len(vertices)))),
-            vertex[2] + (.2* (vertex[2] - z / (1.0*len(vertices))))]
-    
+    return [x/(1.0*len(vertices)),y/(1.0*len(vertices)),z/(1.0*len(vertices))]
+
+def force (vertex,vertices):
+   av = average(vertices)
+   return [vertex[0] + (.2* av[0]),
+           vertex[1] + (.2* av[1]),
+           vertex[2] + (.2* av[2])]
+
+def barycenter(vertex,newVertices,sides,faces):
+    index = newVertices.index(vertex)
+    rSides = filter(lambda x: index in x, sides)
+    rPoints = list(set([item for sublist in rSides for item in sublist]))
+    rPoints.remove(index)
+    rVertices = [n for i,n in enumerate(newVertices) if i in rPoints]
+    R = average(rVertices) 
+    #F = find face points for faces that include vertex, average them. (/n)
+    #faces that include one of these sides
+    rSidesIndexes = [i for i,n in enumerate(sides) if n in rSides]
+    fFaces = [n for i,n in enumerate(faces) if any(el in n for el in rSidesIndexes)]
+    fSidesIndexes = list(set([item for sublist in fFaces for item in sublist]))
+    fSides = [n for i,n in enumerate(sides) if i in fSidesIndexes]
+    fPoints = list(set([item for sublist in fSides for item in sublist])) 
+    fPoints = [item for item in fPoints if item not in rPoints]
+    fPoints.remove(index)
+    fVertices = [n for i,n in enumerate(newVertices) if i in fPoints]
+    print fVertices
+    F = average(fVertices)
+    l = len(rPoints)*1.0
+    newPointX = (F[0] +2*R[0]+ (l-3)*vertex[0])/l
+    newPointY = (F[1] +2*R[1]+ (l-3)*vertex[1])/l
+    newPointZ = (F[2] +2*R[2]+ (l-3)*vertex[2])/l
+    return [newPointX, newPointY, newPointZ]
+
 def iteration(vertices,sides,faces):
     newVertices = vertices[:]
     newSides = []
@@ -58,7 +87,6 @@ def iteration(vertices,sides,faces):
     for face in faces:
         center = centroid(face, vertices, sides)
         centroidIndex = checkAndAdd(center, newVertices)   
-        
         sideV = [sides[i] for i in face]
         points = list(set([item for sublist in sideV for item in sublist])) 
         for p in points:
@@ -74,6 +102,7 @@ def iteration(vertices,sides,faces):
     for vertex in vertices:
         v = newVertices.index(vertex)
         newVertices[v] = force(vertex, vertices)
+     #   newVertices[v] = barycenter(vertex,newVertices,newSides,newFaces)
         
  #   print newVertices
  #   print newSides
